@@ -37,12 +37,13 @@ const Hero = () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    // Color palette matching theme
+    // Warm earthy color palette
     const buildingColors = [
-      'rgba(139, 115, 85, 0.6)',   // accent dark
-      'rgba(180, 160, 130, 0.5)',  // accent medium
-      'rgba(201, 181, 156, 0.4)',  // primary
-      'rgba(160, 140, 110, 0.55)', // warm brown
+      'rgba(166, 124, 82, 0.55)',   // warm caramel
+      'rgba(139, 90, 43, 0.45)',    // rich brown
+      'rgba(194, 154, 108, 0.5)',   // golden sand
+      'rgba(120, 80, 50, 0.4)',     // deep chocolate
+      'rgba(178, 134, 92, 0.5)',    // terracotta
     ];
 
     // Create buildings across the width
