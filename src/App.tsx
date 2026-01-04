@@ -8,6 +8,7 @@ import Founder from "./pages/Founder";
 import Interior from "./pages/Interior";
 import Materials from "./pages/Materials";
 import Unique from "./pages/Unique";
+import Sites from "./pages/Sites";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/interior" element={<Interior />} />
           <Route path="/materials" element={<Materials />} />
           <Route path="/unique" element={<Unique />} />
+          <Route path="/sites" element={<Sites />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />

@@ -1,199 +1,395 @@
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, Award, Clock, Users } from "lucide-react";
+import { ArrowRight, ChevronRight, Building2, Award, Star, Play } from "lucide-react";
+import { Link } from "react-router-dom";
+
+interface BuildingBlock {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  baseX: number;
+  baseY: number;
+  color: string;
+  delay: number;
+}
 
 const Hero = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [buildings, setBuildings] = useState<BuildingBlock[]>([]);
+  const animationRef = useRef<number>();
+
   const scrollToContact = () => {
     document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-secondary/30 to-background pt-16">
-      {/* Animated background pattern */}
-      <div className="absolute inset-0 opacity-[0.03]">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }} />
-      </div>
+  // Initialize building blocks
+  useEffect(() => {
+    const initBuildings = () => {
+      const blocks: BuildingBlock[] = [];
+      const colors = [
+        'rgba(139, 115, 85, 0.3)',  // accent
+        'rgba(201, 181, 156, 0.25)', // primary
+        'rgba(184, 168, 136, 0.2)',  // muted
+        'rgba(217, 207, 199, 0.15)', // light
+      ];
       
-      <div className="container mx-auto px-6 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Text content */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-            className="space-y-8"
+      // Create a cityscape of buildings
+      const buildingCount = 25;
+      for (let i = 0; i < buildingCount; i++) {
+        const baseX = (i / buildingCount) * window.innerWidth;
+        const width = 40 + Math.random() * 80;
+        const height = 100 + Math.random() * 300;
+        const baseY = window.innerHeight - height + 50;
+        
+        blocks.push({
+          id: i,
+          x: baseX,
+          y: baseY,
+          baseX: baseX,
+          baseY: baseY,
+          width: width,
+          height: height,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          delay: Math.random() * 2,
+        });
+      }
+      
+      // Add floating geometric shapes
+      for (let i = 0; i < 15; i++) {
+        const baseX = Math.random() * window.innerWidth;
+        const baseY = Math.random() * window.innerHeight * 0.7;
+        const size = 20 + Math.random() * 60;
+        
+        blocks.push({
+          id: buildingCount + i,
+          x: baseX,
+          y: baseY,
+          baseX: baseX,
+          baseY: baseY,
+          width: size,
+          height: size,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          delay: Math.random() * 3,
+        });
+      }
+      
+      setBuildings(blocks);
+    };
+
+    initBuildings();
+    window.addEventListener('resize', initBuildings);
+    return () => window.removeEventListener('resize', initBuildings);
+  }, []);
+
+  // Handle mouse movement
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  // Animation loop
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const animate = () => {
+      if (!ctx || !canvas) return;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      buildings.forEach((block, index) => {
+        // Calculate distance from mouse
+        const dx = mousePos.x - block.baseX;
+        const dy = mousePos.y - block.baseY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const maxDistance = 300;
+        
+        // Repel effect - blocks move away from cursor
+        let offsetX = 0;
+        let offsetY = 0;
+        let scale = 1;
+        
+        if (distance < maxDistance) {
+          const force = (1 - distance / maxDistance) * 50;
+          offsetX = -(dx / distance) * force;
+          offsetY = -(dy / distance) * force;
+          scale = 1 + (1 - distance / maxDistance) * 0.1; // Slight zoom
+        }
+        
+        // Floating animation
+        const time = Date.now() / 1000;
+        const floatY = Math.sin(time + block.delay) * 5;
+        const floatX = Math.cos(time * 0.5 + block.delay) * 3;
+        
+        // Smooth interpolation
+        block.x += (block.baseX + offsetX + floatX - block.x) * 0.1;
+        block.y += (block.baseY + offsetY + floatY - block.y) * 0.1;
+
+        ctx.save();
+        ctx.translate(block.x + block.width / 2, block.y + block.height / 2);
+        ctx.scale(scale, scale);
+        ctx.translate(-block.width / 2, -block.height / 2);
+        
+        // Draw building/shape
+        ctx.fillStyle = block.color;
+        ctx.beginPath();
+        
+        if (index < 25) {
+          // Building shape with rounded top
+          ctx.roundRect(0, 0, block.width, block.height, [8, 8, 0, 0]);
+          
+          // Windows
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+          const windowSize = 8;
+          const windowGap = 15;
+          const windowsPerRow = Math.floor((block.width - 10) / windowGap);
+          const windowRows = Math.floor((block.height - 20) / windowGap);
+          
+          for (let row = 0; row < windowRows; row++) {
+            for (let col = 0; col < windowsPerRow; col++) {
+              const wx = 10 + col * windowGap;
+              const wy = 10 + row * windowGap;
+              ctx.fillRect(wx, wy, windowSize, windowSize);
+            }
+          }
+        } else {
+          // Geometric floating shapes
+          if (index % 3 === 0) {
+            // Circle
+            ctx.arc(block.width / 2, block.height / 2, block.width / 2, 0, Math.PI * 2);
+          } else if (index % 3 === 1) {
+            // Rounded square
+            ctx.roundRect(0, 0, block.width, block.height, 10);
+          } else {
+            // Triangle
+            ctx.moveTo(block.width / 2, 0);
+            ctx.lineTo(block.width, block.height);
+            ctx.lineTo(0, block.height);
+            ctx.closePath();
+          }
+          ctx.fill();
+        }
+        
+        ctx.restore();
+      });
+
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [buildings, mousePos]);
+
+  return (
+    <section className="relative min-h-screen flex items-center overflow-hidden">
+      {/* Interactive Canvas Background */}
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{ zIndex: 1 }}
+      />
+      
+      {/* Gradient Overlays */}
+      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/60" style={{ zIndex: 2 }} />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/30" style={{ zIndex: 2 }} />
+      
+      {/* Bottom Fade for smooth transition */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" style={{ zIndex: 3 }} />
+
+      {/* Main Content */}
+      <div className="container mx-auto px-6 relative py-24 lg:py-0" style={{ zIndex: 10 }}>
+        <div className="max-w-4xl">
+          
+          {/* Badge */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="inline-flex items-center gap-3 px-5 py-2.5 bg-background/80 backdrop-blur-md rounded-full shadow-lg border border-accent/20 mb-8"
           >
             <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 rounded-full border border-accent/20"
-            >
-              <Building2 className="w-4 h-4 text-accent" />
-              <span className="text-sm font-medium text-accent">Building Excellence Since 1970s</span>
-            </motion.div>
-            
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-heading font-bold leading-tight">
-              <motion.span 
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="block bg-gradient-to-r from-accent via-primary to-accent bg-clip-text text-transparent"
-              >
-                Stumbh
-              </motion.span>
-              <motion.span 
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="block text-foreground"
-              >
-                Constructions
-              </motion.span>
-            </h1>
-            
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="text-xl text-muted-foreground leading-relaxed max-w-xl"
-            >
-              Three generations of construction excellence. With 12 years of hands-on experience and a family legacy spanning 50+ years, we transform spaces across Delhi with precision and care.
-            </motion.p>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="flex flex-col sm:flex-row gap-4"
-            >
-              <Button 
-                size="lg" 
-                onClick={scrollToContact}
-                className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg hover:shadow-xl transition-all group"
-              >
-                Get a Free Quote
-                <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => document.getElementById("projects")?.scrollIntoView({ behavior: "smooth" })}
-                className="border-2 border-accent/20 hover:border-accent/40 hover:bg-accent/5"
-              >
-                View Our Work
-              </Button>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="flex items-center gap-8 pt-4"
-            >
-              {[
-                { value: "500+", label: "Projects" },
-                { value: "50+", label: "Years" },
-                { value: "100%", label: "Satisfaction" },
-              ].map((stat, index) => (
-                <div key={stat.label} className={index > 0 ? "border-l border-border pl-8" : ""}>
-                  <div className="text-3xl font-bold text-accent">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </div>
-              ))}
-            </motion.div>
+              animate={{ scale: [1, 1.3, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="w-2.5 h-2.5 rounded-full bg-accent" 
+            />
+            <span className="text-sm font-semibold text-accent tracking-wide">
+              Building Excellence Since 1970
+            </span>
           </motion.div>
           
-          {/* Visual Element */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="relative hidden lg:block"
+          {/* Main Heading */}
+          <motion.h1 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-heading font-bold leading-[0.95] tracking-tight mb-6"
           >
-            <div className="relative w-full aspect-square max-w-lg mx-auto">
-              {/* Main container with animated border */}
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/20 via-secondary to-accent/10 p-1">
-                <div className="w-full h-full rounded-3xl bg-background/80 backdrop-blur-sm flex items-center justify-center">
-                  
-                  {/* Animated building blocks */}
-                  <div className="relative w-64 h-72">
-                    {/* Building floors animating from bottom to top */}
-                    {[0, 1, 2, 3, 4].map((floor) => (
-                      <motion.div
-                        key={floor}
-                        initial={{ opacity: 0, scaleY: 0 }}
-                        animate={{ opacity: 1, scaleY: 1 }}
-                        transition={{ 
-                          delay: 0.8 + floor * 0.2, 
-                          duration: 0.5,
-                          ease: "easeOut"
-                        }}
-                        className="absolute w-full origin-bottom"
-                        style={{ bottom: `${floor * 48}px` }}
-                      >
-                        <div className={`h-12 mx-auto rounded ${floor === 4 ? 'w-40' : 'w-48'} ${
-                          floor % 2 === 0 ? 'bg-accent/80' : 'bg-accent/60'
-                        } shadow-lg flex items-center justify-center gap-2`}>
-                          {[0, 1, 2].map((window) => (
-                            <motion.div
-                              key={window}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{ delay: 1.5 + floor * 0.2 + window * 0.1 }}
-                              className="w-6 h-6 bg-background/30 rounded-sm"
-                            />
-                          ))}
-                        </div>
-                      </motion.div>
-                    ))}
-                    
-                    {/* Roof */}
-                    <motion.div
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 2.2, duration: 0.5 }}
-                      className="absolute -top-4 left-1/2 -translate-x-1/2"
-                    >
-                      <div className="w-0 h-0 border-l-[80px] border-r-[80px] border-b-[40px] border-l-transparent border-r-transparent border-b-accent"></div>
-                    </motion.div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Floating badges */}
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 2.5 }}
-                className="absolute -right-4 top-1/4 bg-background shadow-lg rounded-xl p-3 border border-border"
+            <span className="block text-foreground drop-shadow-sm">
+              Crafting Your
+            </span>
+            <motion.span 
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, duration: 0.7 }}
+              className="block mt-2 bg-gradient-to-r from-accent via-primary to-accent bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient"
+            >
+              Dream Spaces
+            </motion.span>
+          </motion.h1>
+          
+          {/* Accent Line */}
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.7, duration: 0.8 }}
+            className="h-1.5 w-32 bg-gradient-to-r from-accent to-primary rounded-full origin-left mb-8"
+          />
+          
+          {/* Description */}
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+            className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mb-10"
+          >
+            Transform your vision into architectural masterpieces. We blend innovative design 
+            with structural excellence to create spaces that inspire, endure, and tell your unique story.
+          </motion.p>
+          
+          {/* CTA Buttons */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.6 }}
+            className="flex flex-col sm:flex-row gap-4 mb-16"
+          >
+            <Button 
+              size="lg" 
+              onClick={scrollToContact}
+              className="h-16 px-10 text-lg bg-accent hover:bg-accent/90 text-white shadow-2xl shadow-accent/30 hover:shadow-accent/40 hover:scale-[1.02] transition-all duration-300 rounded-2xl group relative overflow-hidden"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                Start Your Project
+                <motion.span
+                  animate={{ x: [0, 4, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </motion.span>
+              </span>
+              <motion.div 
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              />
+            </Button>
+            
+            <Button 
+              size="lg" 
+              variant="outline"
+              onClick={() => document.getElementById("projects")?.scrollIntoView({ behavior: "smooth" })}
+              className="h-16 px-10 text-lg border-2 border-foreground/20 hover:border-accent hover:bg-accent/5 text-foreground transition-all duration-300 rounded-2xl backdrop-blur-sm group"
+            >
+              <span className="flex items-center gap-2">
+                View Our Work
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </span>
+            </Button>
+
+            <Link to="/sites">
+              <Button 
+                size="lg" 
+                variant="ghost"
+                className="h-16 px-8 text-lg text-foreground hover:bg-accent/10 transition-all duration-300 rounded-2xl group"
               >
-                <Award className="w-6 h-6 text-accent" />
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 2.7 }}
-                className="absolute -left-4 top-1/2 bg-background shadow-lg rounded-xl p-3 border border-border"
-              >
-                <Clock className="w-6 h-6 text-accent" />
-              </motion.div>
-              
-              <motion.div
+                <span className="flex items-center gap-2">
+                  <Play className="w-5 h-5" />
+                  Explore Sites
+                </span>
+              </Button>
+            </Link>
+          </motion.div>
+
+          {/* Stats Row */}
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9, duration: 0.6 }}
+            className="grid grid-cols-3 gap-4 md:gap-8 max-w-2xl"
+          >
+            {[
+              { value: "500+", label: "Projects Delivered", icon: Building2 },
+              { value: "54", label: "Years of Excellence", icon: Award },
+              { value: "100%", label: "Client Satisfaction", icon: Star },
+            ].map((stat, index) => (
+              <motion.div 
+                key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 2.9 }}
-                className="absolute -bottom-4 left-1/3 bg-background shadow-lg rounded-xl p-3 border border-border"
+                transition={{ delay: 1 + index * 0.1 }}
+                whileHover={{ scale: 1.05, y: -5 }}
+                className="group relative p-4 md:p-6 rounded-2xl bg-background/60 backdrop-blur-xl border border-white/10 shadow-lg hover:shadow-xl hover:bg-background/80 transition-all duration-300"
               >
-                <Users className="w-6 h-6 text-accent" />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-accent/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="relative">
+                  <stat.icon className="w-5 h-5 text-accent mb-2 md:mb-3 group-hover:scale-110 transition-transform" />
+                  <div className="text-2xl md:text-4xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent mb-1">
+                    {stat.value}
+                  </div>
+                  <div className="text-xs md:text-sm text-muted-foreground font-medium">{stat.label}</div>
+                </div>
               </motion.div>
-            </div>
+            ))}
           </motion.div>
         </div>
       </div>
+
+      {/* Scroll Indicator */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2 }}
+        className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+        style={{ zIndex: 20 }}
+      >
+        <span className="text-xs text-muted-foreground font-medium tracking-widest uppercase">Scroll</span>
+        <motion.div 
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          className="w-6 h-10 rounded-full border-2 border-accent/40 flex items-start justify-center p-1 bg-background/50 backdrop-blur-sm"
+        >
+          <motion.div 
+            animate={{ height: [4, 12, 4], opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="w-1.5 bg-accent rounded-full"
+          />
+        </motion.div>
+      </motion.div>
     </section>
   );
 };
