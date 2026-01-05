@@ -21,11 +21,12 @@ const Navbar = () => {
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <Building2 className="w-8 h-8 text-accent group-hover:scale-110 transition-transform" />
-            <span className="text-xl font-heading font-bold text-foreground">
-              Stumbh
-            </span>
+          <Link to="/" className="flex items-center group">
+            <img
+              src="https://res.cloudinary.com/dgv8awzpn/image/upload/c_pad,w_160,h_160/v1767548776/stumbh_logo_no_bg_qu9bvt.png"
+              alt="Stumbh Logo"
+              className="block group-hover:scale-110 transition-transform"
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -34,11 +35,10 @@ const Navbar = () => {
               <Link
                 key={link.href}
                 to={link.href}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  location.pathname === link.href
-                    ? "bg-primary/20 text-accent"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${location.pathname === link.href
+                  ? "bg-primary/20 text-accent"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  }`}
               >
                 {link.label}
               </Link>
@@ -74,11 +74,10 @@ const Navbar = () => {
                     key={link.href}
                     to={link.href}
                     onClick={() => setIsOpen(false)}
-                    className={`block px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      location.pathname === link.href
-                        ? "bg-primary/20 text-accent"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                    }`}
+                    className={`block px-4 py-2 rounded-lg text-sm font-medium transition-all ${location.pathname === link.href
+                      ? "bg-primary/20 text-accent"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      }`}
                   >
                     {link.label}
                   </Link>
