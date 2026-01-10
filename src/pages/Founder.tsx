@@ -31,7 +31,7 @@ const teamMembers = [
     name: "Rajesh Kumar",
     designation: "Founder & Managing Director",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
-    description: "With over 35 years of experience in construction, Rajesh ji laid the foundation of Stumbh Constructions. His vision of honest, quality-driven work has been the guiding principle for our entire journey. Under his leadership, we've completed 500+ projects across Delhi NCR.",
+    description: "With over 35 years of experience in construction, Rajesh ji laid the foundation of Stambha Constructions. His vision of honest, quality-driven work has been the guiding principle for our entire journey. Under his leadership, we've completed 500+ projects across Delhi NCR.",
     quote: "Every brick we lay is a promise of trust and quality.",
     experience: "35+ Years",
     isFounder: true
@@ -365,7 +365,7 @@ const Founder = () => {
               Our Leadership
             </Badge>
             <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-              The <span className="text-accent">People</span> Behind Stumbh
+              The <span className="text-accent">People</span> Behind Stambha
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
               Each member brings decades of expertise and a shared commitment to excellence

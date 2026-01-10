@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
@@ -151,68 +151,73 @@ const Services = () => {
 
         {/* Cards Carousel */}
         <div className="relative overflow-hidden">
-          <motion.div
-            className="flex gap-5"
-            animate={{ x: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          >
-            {visibleItems.map((service, index) => {
-              // Varied heights for asymmetric effect - pattern: tall, short, medium, tall
-              const heightPatterns = ['h-[420px]', 'h-[340px]', 'h-[380px]', 'h-[400px]'];
-              const marginPatterns = ['mt-0', 'mt-12', 'mt-6', 'mt-16'];
-              const heightClass = heightPatterns[index % 4];
-              const marginTop = marginPatterns[index % 4];
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={currentIndex}
+              className="flex gap-5"
+              initial={{ opacity: 0.5, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0.5, x: -100 }}
+              transition={{ type: "spring", stiffness: 200, damping: 25 }}
+            >
+              {visibleItems.map((service, index) => {
+                // Varied heights for asymmetric effect - pattern: tall, short, medium, tall
+                const heightPatterns = ['h-[420px]', 'h-[340px]', 'h-[380px]', 'h-[400px]'];
+                const marginPatterns = ['mt-0', 'mt-12', 'mt-6', 'mt-16'];
+                const heightClass = heightPatterns[index % 4];
+                const marginTop = marginPatterns[index % 4];
 
-              return (
-                <motion.div
-                  key={`${service.title}-${currentIndex}-${index}`}
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                  className={`flex-shrink-0 ${marginTop}
+                return (
+                  <motion.div
+                    key={`${service.title}-${currentIndex}-${index}`}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                    className={`flex-shrink-0 ${marginTop}
                     ${itemsPerView === 1 ? 'w-full' : ''}
                     ${itemsPerView === 2 ? 'w-[calc(50%-10px)]' : ''}
                     ${itemsPerView === 3 ? 'w-[calc(33.333%-14px)]' : ''}
                     ${itemsPerView === 4 ? 'w-[calc(25%-15px)]' : ''}
                   `}
-                >
-                  <motion.div
-                    whileHover={{ y: -8 }}
-                    transition={{ duration: 0.3 }}
-                    className={`group relative ${heightClass} rounded-2xl overflow-hidden cursor-pointer`}
                   >
-                    {/* Image */}
                     <motion.div
-                      className="absolute inset-0"
-                      whileHover={{ scale: 1.03 }}
-                      transition={{ duration: 0.5 }}
+                      whileHover={{ y: -8 }}
+                      transition={{ duration: 0.3 }}
+                      className={`group relative ${heightClass} rounded-2xl overflow-hidden cursor-pointer`}
                     >
-                      <img
-                        src={service.image}
-                        alt={service.title}
-                        className="w-full h-full object-cover"
-                      />
+                      {/* Image */}
+                      <motion.div
+                        className="absolute inset-0"
+                        whileHover={{ scale: 1.03 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <img
+                          src={service.image}
+                          alt={service.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </motion.div>
+
+                      {/* Subtle gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+
+                      {/* Content */}
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <h3 className="text-white text-lg font-medium mb-1 flex items-center gap-2">
+                          {service.title}
+                          <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+                        </h3>
+                        <p className="text-white/60 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          {service.description}
+                        </p>
+                      </div>
                     </motion.div>
-
-                    {/* Subtle gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-
-                    {/* Content */}
-                    <div className="absolute bottom-0 left-0 right-0 p-5">
-                      <h3 className="text-white text-lg font-medium mb-1 flex items-center gap-2">
-                        {service.title}
-                        <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                      </h3>
-                      <p className="text-white/60 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        {service.description}
-                      </p>
-                    </div>
                   </motion.div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+                );
+              })}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Minimal progress indicator */}

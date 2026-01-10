@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import ScrollToTop from "./components/ScrollToTop";
 import Index from "./pages/Index";
 import Founder from "./pages/Founder";
 import Interior from "./pages/Interior";
@@ -13,6 +14,11 @@ import Sites from "./pages/Sites";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import ResidentialConstruction from "./pages/ResidentialConstruction";
+import CommercialProjects from "./pages/CommercialProjects";
+import InteriorDesignService from "./pages/InteriorDesignService";
+import RenovationRestoration from "./pages/RenovationRestoration";
+import Consultancy from "./pages/Consultancy";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +28,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/founder" element={<Founder />} />
@@ -32,6 +39,11 @@ const App = () => (
           <Route path="/sites" element={<Sites />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/services/residential" element={<ResidentialConstruction />} />
+          <Route path="/services/commercial" element={<CommercialProjects />} />
+          <Route path="/services/interior-design" element={<InteriorDesignService />} />
+          <Route path="/services/renovation" element={<RenovationRestoration />} />
+          <Route path="/services/consultancy" element={<Consultancy />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -20,15 +20,16 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <Link to="/" className="flex items-center group">
             <img
-              src="https://res.cloudinary.com/dgv8awzpn/image/upload/c_pad,w_160,h_160/v1767548776/stumbh_logo_no_bg_qu9bvt.png"
-              alt="Stumbh Logo"
-              className="block group-hover:scale-110 transition-transform"
+              src="https://res.cloudinary.com/dgv8awzpn/image/upload/v1767893007/stambhalogo_ryam5r.png"
+              alt="Stambha Logo"
+              className="h-10 md:h-12 lg:h-14 w-auto object-contain block transition-transform duration-300 group-hover:scale-105"
+              style={{ imageRendering: 'auto' }}
+              loading="eager"
+              decoding="sync"
             />
           </Link>
-
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (

@@ -78,7 +78,7 @@ const Auth = () => {
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Building2 className="w-8 h-8 text-accent" />
-            <span className="text-xl font-heading font-bold">Stumbh Admin</span>
+            <span className="text-xl font-heading font-bold">Stambha Admin</span>
           </div>
           <CardTitle>{isLogin ? "Welcome Back" : "Create Account"}</CardTitle>
           <CardDescription>
@@ -92,7 +92,7 @@ const Auth = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@stumbh.com"
+                placeholder="admin@Stambha.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

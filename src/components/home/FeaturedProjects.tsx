@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -165,86 +165,92 @@ const FeaturedProjects = () => {
 
         {/* Projects Carousel */}
         <div className="relative overflow-hidden">
-          <motion.div
-            className="flex gap-6"
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          >
-            {visibleItems.map((project, index) => {
-              const statusConfig = getStatusConfig(project.status);
-              const StatusIcon = statusConfig.icon;
-              const image = project.image_url || fallbackImages[index % fallbackImages.length];
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={currentIndex}
+              className="flex gap-6"
+              initial={{ opacity: 0.5, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0.5, x: -100 }}
+              transition={{ type: "spring", stiffness: 200, damping: 25 }}
+            >
+              {visibleItems.map((project, index) => {
+                const statusConfig = getStatusConfig(project.status);
+                const StatusIcon = statusConfig.icon;
+                const image = project.image_url || fallbackImages[index % fallbackImages.length];
 
-              // Different unevenness pattern: wave-like
-              const heightPatterns = ['h-[460px]', 'h-[380px]', 'h-[420px]'];
-              const marginPatterns = ['mt-8', 'mt-0', 'mt-16'];
-              const heightClass = heightPatterns[index % 3];
-              const marginTop = marginPatterns[index % 3];
+                // Different unevenness pattern: wave-like
+                const heightPatterns = ['h-[460px]', 'h-[380px]', 'h-[420px]'];
+                const marginPatterns = ['mt-8', 'mt-0', 'mt-16'];
+                const heightClass = heightPatterns[index % 3];
+                const marginTop = marginPatterns[index % 3];
 
-              return (
-                <motion.div
-                  key={`${project.id}-${currentIndex}`}
-                  initial={{ opacity: 0, x: 60 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -60 }}
-                  transition={{ duration: 0.4, delay: index * 0.08 }}
-                  className={`flex-shrink-0 ${marginTop}
+                return (
+                  <motion.div
+                    key={`${project.id}-${currentIndex}`}
+                    initial={{ opacity: 0, x: 60 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -60 }}
+                    transition={{ duration: 0.4, delay: index * 0.08 }}
+                    className={`flex-shrink-0 ${marginTop}
                     ${itemsPerView === 1 ? 'w-full' : ''}
                     ${itemsPerView === 2 ? 'w-[calc(50%-12px)]' : ''}
                     ${itemsPerView === 3 ? 'w-[calc(33.333%-16px)]' : ''}
                   `}
-                >
-                  <motion.div
-                    whileHover={{ y: -6 }}
-                    transition={{ duration: 0.3 }}
-                    className={`group relative ${heightClass} rounded-3xl overflow-hidden cursor-pointer`}
                   >
-                    {/* Image */}
                     <motion.div
-                      className="absolute inset-0"
-                      whileHover={{ scale: 1.03 }}
-                      transition={{ duration: 0.5 }}
+                      whileHover={{ y: -6 }}
+                      transition={{ duration: 0.3 }}
+                      className={`group relative ${heightClass} rounded-3xl overflow-hidden cursor-pointer`}
                     >
-                      <img
-                        src={image}
-                        alt={project.title}
-                        className="w-full h-full object-cover"
-                      />
+                      {/* Image */}
+                      <motion.div
+                        className="absolute inset-0"
+                        whileHover={{ scale: 1.03 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <img
+                          src={image}
+                          alt={project.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </motion.div>
+
+                      {/* Subtle overlays */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+
+                      {/* Status - minimal */}
+                      <div className="absolute top-4 left-4">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-foreground/80">
+                          <StatusIcon className="w-3 h-3" />
+                          <span className="text-xs font-medium">{statusConfig.label}</span>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <div className="absolute bottom-0 left-0 right-0 p-6">
+                        {project.division && (
+                          <span className="inline-block text-xs text-white/70 mb-2 font-medium">
+                            {project.division}
+                          </span>
+                        )}
+
+                        <h3 className="text-white text-xl font-heading font-semibold mb-2 flex items-center gap-2">
+                          {project.title}
+                          <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+                        </h3>
+
+                        <div className="flex items-center gap-2 text-white/60">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span className="text-sm line-clamp-1">{project.address}</span>
+                        </div>
+                      </div>
                     </motion.div>
-
-                    {/* Subtle overlays */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-
-                    {/* Status - minimal */}
-                    <div className="absolute top-4 left-4">
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-foreground/80">
-                        <StatusIcon className="w-3 h-3" />
-                        <span className="text-xs font-medium">{statusConfig.label}</span>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="absolute bottom-0 left-0 right-0 p-6">
-                      {project.division && (
-                        <span className="inline-block text-xs text-white/70 mb-2 font-medium">
-                          {project.division}
-                        </span>
-                      )}
-
-                      <h3 className="text-white text-xl font-heading font-semibold mb-2 flex items-center gap-2">
-                        {project.title}
-                        <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                      </h3>
-
-                      <div className="flex items-center gap-2 text-white/60">
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span className="text-sm line-clamp-1">{project.address}</span>
-                      </div>
-                    </div>
                   </motion.div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+                );
+              })}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Minimal progress indicator */}

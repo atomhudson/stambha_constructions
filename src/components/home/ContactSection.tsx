@@ -261,7 +261,7 @@ const ContactSection = () => {
             <ContactCard
               icon={Mail}
               title="Email Us"
-              value="info@stumbhconstructions.com"
+              value="info@Stambhaconstructions.com"
               subtext="We respond within 24 hours"
               delay={0.1}
             />

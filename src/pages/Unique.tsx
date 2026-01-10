@@ -56,7 +56,7 @@ const Unique = () => {
               </span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              Discover what makes Stumbh Constructions the preferred choice for families across Delhi
+              Discover what makes Stambha Constructions the preferred choice for families across Delhi
             </p>
           </motion.div>
         </section>
@@ -116,7 +116,7 @@ const Unique = () => {
                 ))}
               </div>
               <blockquote className="text-xl md:text-2xl text-foreground font-medium mb-6 italic">
-                "Stumbh Constructions transformed our house into a dream home. Their attention to detail and commitment to quality is unmatched. The team was professional, transparent, and delivered on time."
+                "Stambha Constructions transformed our house into a dream home. Their attention to detail and commitment to quality is unmatched. The team was professional, transparent, and delivered on time."
               </blockquote>
               <div className="text-muted-foreground">
                 <span className="font-semibold text-foreground">Rajesh Kumar</span>
