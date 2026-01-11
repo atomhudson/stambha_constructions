@@ -1,3 +1,12 @@
+# Environment files
+.env
+*.env
+.env.*
+
+# Sensitive SQL data
+sql_important/
+sql_important/*
+
 # Logs
 logs
 *.log

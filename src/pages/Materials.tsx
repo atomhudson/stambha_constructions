@@ -5,8 +5,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/home/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Package, Building2, Paintbrush, Wrench, Zap, Droplets, 
+import {
+  Package, Building2, Paintbrush, Wrench, Zap, Droplets,
   Sparkles, Shield, Award, CheckCircle, ArrowRight,
   Hammer, Layers, Palette, Lightbulb, Droplet, Grid3X3
 } from "lucide-react";
@@ -32,15 +32,16 @@ const categoryImages: Record<string, string> = {
   Electrical: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400&h=300&fit=crop",
 };
 
-const brandLogos = [
-  { name: "UltraTech", tagline: "The Engineer's Choice", color: "from-blue-500/20 to-blue-600/20" },
-  { name: "TATA Tiscon", tagline: "Super Ductile TMT", color: "from-red-500/20 to-red-600/20" },
-  { name: "Kajaria", tagline: "India's No.1 Tile", color: "from-orange-500/20 to-orange-600/20" },
-  { name: "Kohler", tagline: "The Bold Look", color: "from-slate-500/20 to-slate-600/20" },
-  { name: "Asian Paints", tagline: "Har Ghar Kuch Kehta Hai", color: "from-rose-500/20 to-rose-600/20" },
-  { name: "Havells", tagline: "Wires That Don't Catch Fire", color: "from-yellow-500/20 to-yellow-600/20" },
-  { name: "Pidilite", tagline: "Building Bonds", color: "from-purple-500/20 to-purple-600/20" },
-  { name: "Saint-Gobain", tagline: "Making a Difference", color: "from-teal-500/20 to-teal-600/20" },
+// Fallback brand partners
+const fallbackBrands = [
+  { id: "1", name: "UltraTech", tagline: "The Engineer's Choice", color_gradient: "from-blue-500/20 to-blue-600/20" },
+  { id: "2", name: "TATA Tiscon", tagline: "Super Ductile TMT", color_gradient: "from-red-500/20 to-red-600/20" },
+  { id: "3", name: "Kajaria", tagline: "India's No.1 Tile", color_gradient: "from-orange-500/20 to-orange-600/20" },
+  { id: "4", name: "Kohler", tagline: "The Bold Look", color_gradient: "from-slate-500/20 to-slate-600/20" },
+  { id: "5", name: "Asian Paints", tagline: "Har Ghar Kuch Kehta Hai", color_gradient: "from-rose-500/20 to-rose-600/20" },
+  { id: "6", name: "Havells", tagline: "Wires That Don't Catch Fire", color_gradient: "from-yellow-500/20 to-yellow-600/20" },
+  { id: "7", name: "Pidilite", tagline: "Building Bonds", color_gradient: "from-purple-500/20 to-purple-600/20" },
+  { id: "8", name: "Saint-Gobain", tagline: "Making a Difference", color_gradient: "from-teal-500/20 to-teal-600/20" },
 ];
 
 // 3D Tilt Card Component
@@ -48,10 +49,10 @@ const TiltCard = ({ children, className = "" }: { children: React.ReactNode; cla
   const ref = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  
+
   const mouseXSpring = useSpring(x, { stiffness: 300, damping: 30 });
   const mouseYSpring = useSpring(y, { stiffness: 300, damping: 30 });
-  
+
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["8deg", "-8deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-8deg", "8deg"]);
 
@@ -87,7 +88,7 @@ const TiltCard = ({ children, className = "" }: { children: React.ReactNode; cla
 };
 
 // Brand Card Component
-const BrandCard = ({ brand, index }: { brand: typeof brandLogos[0]; index: number }) => (
+const BrandCard = ({ brand, index }: { brand: any; index: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     whileInView={{ opacity: 1, y: 0 }}
@@ -95,7 +96,7 @@ const BrandCard = ({ brand, index }: { brand: typeof brandLogos[0]; index: numbe
     transition={{ delay: index * 0.1 }}
   >
     <TiltCard className="cursor-pointer">
-      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${brand.color} backdrop-blur-sm border border-border/50 p-6 h-full group`}>
+      <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${brand.color_gradient || "from-blue-500/20 to-blue-600/20"} backdrop-blur-sm border border-border/50 p-6 h-full group`}>
         <div className="absolute inset-0 bg-gradient-to-br from-background/80 to-background/40" />
         <div className="relative z-10">
           <h3 className="text-xl font-heading font-bold text-foreground group-hover:text-accent transition-colors">
@@ -107,7 +108,7 @@ const BrandCard = ({ brand, index }: { brand: typeof brandLogos[0]; index: numbe
             <span>Authorized Partner</span>
           </div>
         </div>
-        <motion.div 
+        <motion.div
           className="absolute -bottom-2 -right-2 w-20 h-20 bg-accent/10 rounded-full blur-xl"
           animate={{ scale: [1, 1.2, 1] }}
           transition={{ duration: 3, repeat: Infinity }}
@@ -118,35 +119,33 @@ const BrandCard = ({ brand, index }: { brand: typeof brandLogos[0]; index: numbe
 );
 
 // Category Tab Component
-const CategoryTab = ({ 
-  category, 
-  isActive, 
-  onClick, 
-  icon: Icon 
-}: { 
-  category: string; 
-  isActive: boolean; 
+const CategoryTab = ({
+  category,
+  isActive,
+  onClick,
+  icon: Icon
+}: {
+  category: string;
+  isActive: boolean;
   onClick: () => void;
   icon: any;
 }) => (
   <motion.button
     onClick={onClick}
-    className={`relative flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 ${
-      isActive 
-        ? "bg-accent text-accent-foreground shadow-lg" 
+    className={`relative flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 ${isActive
+        ? "bg-accent text-accent-foreground shadow-lg"
         : "bg-card hover:bg-secondary text-foreground"
-    }`}
+      }`}
     whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.98 }}
   >
-    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-      isActive ? "bg-accent-foreground/20" : "bg-accent/10"
-    }`}>
+    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isActive ? "bg-accent-foreground/20" : "bg-accent/10"
+      }`}>
       <Icon className={`w-6 h-6 ${isActive ? "text-accent-foreground" : "text-accent"}`} />
     </div>
     <span className="text-sm font-medium">{category}</span>
     {isActive && (
-      <motion.div 
+      <motion.div
         layoutId="activeTab"
         className="absolute inset-0 rounded-xl bg-accent -z-10"
         transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
@@ -158,7 +157,7 @@ const CategoryTab = ({
 // Material Card Component
 const MaterialCard = ({ material, index }: { material: any; index: number }) => {
   const Icon = categoryIcons[material.category] || Package;
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -170,15 +169,15 @@ const MaterialCard = ({ material, index }: { material: any; index: number }) => 
         <div className="group relative overflow-hidden rounded-2xl bg-card border border-border/50 hover:border-accent/30 transition-all duration-500 h-full">
           {/* Image Section */}
           <div className="relative h-48 overflow-hidden">
-            <img 
+            <img
               src={categoryImages[material.category] || "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop"}
               alt={material.name}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
-            
+
             {/* Floating Badge */}
-            <motion.div 
+            <motion.div
               className="absolute top-4 left-4"
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -189,13 +188,13 @@ const MaterialCard = ({ material, index }: { material: any; index: number }) => 
                 {material.category}
               </Badge>
             </motion.div>
-            
+
             {/* Brand Logo */}
             <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full">
               <span className="text-xs font-bold text-accent">{material.brand}</span>
             </div>
           </div>
-          
+
           {/* Content Section */}
           <div className="p-5">
             <h3 className="text-lg font-heading font-bold text-foreground group-hover:text-accent transition-colors">
@@ -204,7 +203,7 @@ const MaterialCard = ({ material, index }: { material: any; index: number }) => 
             <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
               {material.description || "Premium quality material from trusted manufacturers."}
             </p>
-            
+
             {/* Features */}
             <div className="flex items-center gap-3 mt-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-1">
@@ -217,7 +216,7 @@ const MaterialCard = ({ material, index }: { material: any; index: number }) => 
               </div>
             </div>
           </div>
-          
+
           {/* Hover Glow Effect */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
             <div className="absolute inset-0 bg-gradient-to-r from-accent/5 via-transparent to-accent/5" />
@@ -229,9 +228,9 @@ const MaterialCard = ({ material, index }: { material: any; index: number }) => 
 };
 
 // Feature Card Component
-const FeatureCard = ({ icon: Icon, title, description, delay }: { 
-  icon: any; 
-  title: string; 
+const FeatureCard = ({ icon: Icon, title, description, delay }: {
+  icon: any;
+  title: string;
   description: string;
   delay: number;
 }) => (
@@ -254,8 +253,9 @@ const FeatureCard = ({ icon: Icon, title, description, delay }: {
 
 const Materials = () => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  
-  const { data: materials, isLoading } = useQuery({
+
+  // Fetch materials
+  const { data: materials, isLoading: materialsLoading } = useQuery({
     queryKey: ["materials"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -267,9 +267,25 @@ const Materials = () => {
     },
   });
 
+  // Fetch brand partners from database
+  const { data: dbBrands, isLoading: brandsLoading } = useQuery({
+    queryKey: ["brand-partners"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brand_partners")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Use database brands or fallback
+  const brandPartners = dbBrands && dbBrands.length > 0 ? dbBrands : fallbackBrands;
+
   const categories = materials ? [...new Set(materials.map(m => m.category))] : [];
-  
-  const filteredMaterials = activeCategory 
+
+  const filteredMaterials = activeCategory
     ? materials?.filter(m => m.category === activeCategory)
     : materials;
 
@@ -283,7 +299,7 @@ const Materials = () => {
           {/* Background Decorations */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl -z-10" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10" />
-          
+
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -299,14 +315,14 @@ const Materials = () => {
               <Sparkles className="w-4 h-4" />
               <span className="text-sm font-medium">Premium Construction Materials</span>
             </motion.div>
-            
+
             <h1 className="text-4xl md:text-6xl font-heading font-bold mb-6">
               Built with the{" "}
               <span className="relative">
                 <span className="bg-gradient-to-r from-accent via-primary to-accent bg-clip-text text-transparent bg-[length:200%] animate-gradient">
                   Best Materials
                 </span>
-                <motion.span 
+                <motion.span
                   className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-accent to-primary rounded-full"
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
@@ -314,9 +330,9 @@ const Materials = () => {
                 />
               </span>
             </h1>
-            
+
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              We partner exclusively with India's most trusted brands to ensure exceptional quality, 
+              We partner exclusively with India's most trusted brands to ensure exceptional quality,
               durability, and peace of mind in every project we undertake.
             </p>
           </motion.div>
@@ -338,13 +354,21 @@ const Materials = () => {
               <div className="h-px w-12 bg-border" />
             </motion.div>
           </div>
-          
+
           <div className="container mx-auto px-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {brandLogos.map((brand, index) => (
-                <BrandCard key={brand.name} brand={brand} index={index} />
-              ))}
-            </div>
+            {brandsLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <Skeleton key={i} className="h-32 rounded-2xl" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {brandPartners.map((brand, index) => (
+                  <BrandCard key={brand.id} brand={brand} index={index} />
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -376,14 +400,14 @@ const Materials = () => {
 
         {/* Materials Grid */}
         <section className="container mx-auto px-6 mb-20">
-          {isLoading ? (
+          {materialsLoading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
                 <Skeleton key={i} className="h-80 rounded-2xl" />
               ))}
             </div>
           ) : (
-            <motion.div 
+            <motion.div
               layout
               className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
@@ -392,9 +416,9 @@ const Materials = () => {
               ))}
             </motion.div>
           )}
-          
+
           {filteredMaterials?.length === 0 && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="text-center py-20"
@@ -420,7 +444,7 @@ const Materials = () => {
               Every material undergoes rigorous quality checks before being used in your project.
             </p>
           </motion.div>
-          
+
           <div className="grid md:grid-cols-2 gap-4">
             <FeatureCard
               icon={Shield}
@@ -464,18 +488,18 @@ const Materials = () => {
                 backgroundSize: '32px 32px'
               }} />
             </div>
-            
+
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="text-center md:text-left">
                 <h2 className="text-2xl md:text-3xl font-heading font-bold text-accent-foreground mb-3">
                   Quality You Can Trust
                 </h2>
                 <p className="text-accent-foreground/80 max-w-xl">
-                  We never compromise on materials because we know that the foundation of a lasting 
+                  We never compromise on materials because we know that the foundation of a lasting
                   structure lies in the quality of its components.
                 </p>
               </div>
-              
+
               <motion.a
                 href="/#contact"
                 whileHover={{ scale: 1.05 }}
@@ -486,7 +510,7 @@ const Materials = () => {
                 <ArrowRight className="w-4 h-4" />
               </motion.a>
             </div>
-            
+
             {/* Floating Orbs */}
             <motion.div
               className="absolute -top-10 -right-10 w-40 h-40 bg-accent-foreground/10 rounded-full blur-2xl"

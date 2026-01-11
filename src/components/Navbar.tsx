@@ -44,11 +44,7 @@ const Navbar = () => {
                 {link.label}
               </Link>
             ))}
-            <Link to="/admin">
-              <Button variant="outline" size="sm" className="ml-4 border-accent/30 hover:bg-accent hover:text-accent-foreground">
-                Admin
-              </Button>
-            </Link>
+            {/* Admin link removed for security */}
           </div>
 
           {/* Mobile Menu Button */}
@@ -83,11 +79,7 @@ const Navbar = () => {
                     {link.label}
                   </Link>
                 ))}
-                <Link to="/admin" onClick={() => setIsOpen(false)}>
-                  <Button variant="outline" size="sm" className="w-full mt-2">
-                    Admin Panel
-                  </Button>
-                </Link>
+                {/* Admin link removed for security */}
               </div>
             </motion.div>
           )}

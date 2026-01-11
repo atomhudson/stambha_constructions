@@ -1,11 +1,14 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/home/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LikeButton } from "@/components/LikeButton";
+import { useProjectView, usePageView } from "@/hooks/useAnalytics";
+import { Helmet } from "react-helmet-async";
 import {
     ArrowLeft,
     MapPin,
@@ -23,7 +26,9 @@ import {
     Home,
     Armchair,
     TreePine,
-    Sparkles
+    Sparkles,
+    Share2,
+    Eye
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -35,73 +40,97 @@ const fallbackImages = [
 ];
 
 const categoryData: Record<string, { icon: any; gradient: string; accent: string }> = {
-    BATHROOM: {
-        icon: Bath,
-        gradient: "from-sky-400/20 via-blue-500/10 to-indigo-500/20",
-        accent: "bg-sky-500"
-    },
-    BEDROOM: {
-        icon: Bed,
-        gradient: "from-violet-400/20 via-purple-500/10 to-fuchsia-500/20",
-        accent: "bg-violet-500"
-    },
-    DINING: {
-        icon: Coffee,
-        gradient: "from-amber-400/20 via-orange-500/10 to-red-500/20",
-        accent: "bg-amber-500"
-    },
-    KITCHEN: {
-        icon: ChefHat,
-        gradient: "from-rose-400/20 via-red-500/10 to-pink-500/20",
-        accent: "bg-rose-500"
-    },
-    FACADE: {
-        icon: Home,
-        gradient: "from-slate-400/20 via-zinc-500/10 to-stone-500/20",
-        accent: "bg-slate-500"
-    },
-    "LIVING ROOM": {
-        icon: Armchair,
-        gradient: "from-emerald-400/20 via-green-500/10 to-teal-500/20",
-        accent: "bg-emerald-500"
-    },
-    TERRACE: {
-        icon: TreePine,
-        gradient: "from-lime-400/20 via-green-500/10 to-emerald-500/20",
-        accent: "bg-lime-500"
-    },
+    BATHROOM: { icon: Bath, gradient: "from-sky-400/20 via-blue-500/10 to-indigo-500/20", accent: "bg-sky-500" },
+    BEDROOM: { icon: Bed, gradient: "from-violet-400/20 via-purple-500/10 to-fuchsia-500/20", accent: "bg-violet-500" },
+    DINING: { icon: Coffee, gradient: "from-amber-400/20 via-orange-500/10 to-red-500/20", accent: "bg-amber-500" },
+    KITCHEN: { icon: ChefHat, gradient: "from-rose-400/20 via-red-500/10 to-pink-500/20", accent: "bg-rose-500" },
+    FACADE: { icon: Home, gradient: "from-slate-400/20 via-zinc-500/10 to-stone-500/20", accent: "bg-slate-500" },
+    "LIVING ROOM": { icon: Armchair, gradient: "from-emerald-400/20 via-green-500/10 to-teal-500/20", accent: "bg-emerald-500" },
+    TERRACE: { icon: TreePine, gradient: "from-lime-400/20 via-green-500/10 to-emerald-500/20", accent: "bg-lime-500" },
 };
 
 const getStatusConfig = (status: string) => {
     switch (status) {
-        case "completed":
-            return { icon: CheckCircle2, label: "Completed", color: "text-emerald-500" };
-        case "ongoing":
-            return { icon: Clock, label: "Ongoing", color: "text-amber-500" };
-        default:
-            return { icon: Calendar, label: "Planned", color: "text-blue-500" };
+        case "completed": return { icon: CheckCircle2, label: "Completed", color: "text-emerald-500" };
+        case "ongoing": return { icon: Clock, label: "Ongoing", color: "text-amber-500" };
+        default: return { icon: Calendar, label: "Planned", color: "text-blue-500" };
     }
 };
 
+// Helper to create SEO-friendly slug
+export const createProjectSlug = (title: string, id: string) => {
+    const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .substring(0, 50);
+    return `${slug}-${id.substring(0, 8)}`;
+};
+
+// Helper to extract ID from slug
+export const extractIdFromSlug = (slug: string) => {
+    // The slug format is: title-slug-first8charsOfId
+    const parts = slug.split('-');
+    const shortId = parts[parts.length - 1];
+    return shortId;
+};
+
 const ProjectDetail = () => {
-    const { id } = useParams<{ id: string }>();
+    const { slug } = useParams<{ slug: string }>();
+    const navigate = useNavigate();
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [projectId, setProjectId] = useState<string | null>(null);
 
-    // Fetch project details
+    // Track page view
+    usePageView();
+
+    // First, try to find the project by the slug/ID
     const { data: project, isLoading: projectLoading } = useQuery({
-        queryKey: ["project-detail", id],
+        queryKey: ["project-detail", slug],
         queryFn: async () => {
-            const { data, error } = await supabase
+            if (!slug) return null;
+
+            // Try direct UUID match first (for backward compatibility with /project/:id)
+            const { data: directMatch } = await supabase
                 .from("projects")
                 .select("*, project_images(*)")
-                .eq("id", id)
-                .single();
-            if (error) throw error;
-            return data;
+                .eq("id", slug)
+                .maybeSingle();
+
+            if (directMatch) return directMatch;
+
+            // Extract the short ID from the SEO slug (last part after final dash)
+            const shortId = extractIdFromSlug(slug);
+
+            // Find project where ID starts with the short ID
+            const { data: allProjects } = await supabase
+                .from("projects")
+                .select("*, project_images(*)");
+
+            // Find project whose ID starts with shortId
+            const matchedProject = allProjects?.find(p =>
+                p.id.substring(0, 8) === shortId || p.id.startsWith(shortId)
+            );
+
+            if (matchedProject) return matchedProject;
+
+            return null;
         },
-        enabled: !!id,
+        enabled: !!slug,
     });
+
+    // Track project view once we have the project
+    useProjectView(project?.id);
+
+    // Redirect to SEO-friendly URL if needed
+    useEffect(() => {
+        if (project && slug && !slug.includes('-')) {
+            // If accessed by raw ID, redirect to SEO-friendly URL
+            const seoSlug = createProjectSlug(project.title, project.id);
+            navigate(`/projects/${seoSlug}`, { replace: true });
+        }
+    }, [project, slug, navigate]);
 
     // Fetch related projects
     const { data: relatedProjects } = useQuery({
@@ -111,7 +140,7 @@ const ProjectDetail = () => {
                 .from("projects")
                 .select("*, project_images(*)")
                 .eq("category", project?.category)
-                .neq("id", id)
+                .neq("id", project?.id)
                 .limit(3);
             if (error) throw error;
             return data;
@@ -137,6 +166,25 @@ const ProjectDetail = () => {
     const CategoryIcon = catData.icon;
     const statusConfig = project ? getStatusConfig(project.status) : null;
     const StatusIcon = statusConfig?.icon;
+
+    // Share functionality
+    const handleShare = async () => {
+        const url = window.location.href;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: project?.title,
+                    text: `Check out this ${project?.category || 'amazing'} project by Stambha Constructions`,
+                    url,
+                });
+            } catch (err) {
+                console.log('Share cancelled');
+            }
+        } else {
+            navigator.clipboard.writeText(url);
+            // Could add toast here
+        }
+    };
 
     // Keyboard navigation for lightbox
     useEffect(() => {
@@ -171,6 +219,9 @@ const ProjectDetail = () => {
     if (!project) {
         return (
             <div className="min-h-screen bg-background">
+                <Helmet>
+                    <title>Project Not Found | Stambha Constructions</title>
+                </Helmet>
                 <Navbar />
                 <main className="pt-24 pb-16 flex items-center justify-center">
                     <div className="text-center">
@@ -190,17 +241,65 @@ const ProjectDetail = () => {
         );
     }
 
+    // SEO metadata
+    const pageTitle = `${project.title} | ${project.category || 'Interior'} Project | Stambha Constructions`;
+    const pageDescription = project.description ||
+        `View our ${project.category || 'stunning'} project at ${project.address}. Professional construction and interior design by Stambha Constructions, Delhi's trusted builder with 50+ years of experience.`;
+    const pageImage = images[0]?.url || fallbackImages[0];
+    const pageUrl = window.location.href;
+
     return (
         <div className="min-h-screen bg-background">
+            {/* SEO Meta Tags */}
+            <Helmet>
+                <title>{pageTitle}</title>
+                <meta name="description" content={pageDescription} />
+
+                {/* Open Graph / Facebook */}
+                <meta property="og:type" content="website" />
+                <meta property="og:url" content={pageUrl} />
+                <meta property="og:title" content={pageTitle} />
+                <meta property="og:description" content={pageDescription} />
+                <meta property="og:image" content={pageImage} />
+
+                {/* Twitter */}
+                <meta property="twitter:card" content="summary_large_image" />
+                <meta property="twitter:url" content={pageUrl} />
+                <meta property="twitter:title" content={pageTitle} />
+                <meta property="twitter:description" content={pageDescription} />
+                <meta property="twitter:image" content={pageImage} />
+
+                {/* Additional SEO */}
+                <meta name="keywords" content={`${project.category}, interior design, construction, Delhi, ${project.address}, Stambha Constructions`} />
+                <link rel="canonical" href={pageUrl} />
+
+                {/* Structured Data */}
+                <script type="application/ld+json">
+                    {JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "CreativeWork",
+                        "name": project.title,
+                        "description": pageDescription,
+                        "image": pageImage,
+                        "author": {
+                            "@type": "Organization",
+                            "name": "Stambha Constructions"
+                        },
+                        "dateCreated": project.created_at,
+                        "locationCreated": {
+                            "@type": "Place",
+                            "address": project.address
+                        }
+                    })}
+                </script>
+            </Helmet>
+
             <Navbar />
 
             <main className="pt-24 pb-16">
                 {/* Back button & Header */}
                 <section className="container mx-auto px-6 mb-8">
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                    >
+                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
                         <Link
                             to="/interior"
                             className="inline-flex items-center gap-2 text-muted-foreground hover:text-accent transition-colors mb-6 group"
@@ -231,6 +330,22 @@ const ProjectDetail = () => {
                             <h1 className="text-3xl md:text-5xl font-heading font-bold text-foreground">
                                 {project.title}
                             </h1>
+                            <p className="text-muted-foreground mt-2 flex items-center gap-2">
+                                <MapPin className="w-4 h-4" />
+                                {project.address}
+                            </p>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-3">
+                            <LikeButton projectId={project.id} className="!bg-secondary hover:!bg-secondary/80 !text-foreground" />
+                            <button
+                                onClick={handleShare}
+                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
+                            >
+                                <Share2 className="w-4 h-4" />
+                                <span className="text-sm font-medium">Share</span>
+                            </button>
                         </div>
                     </motion.div>
                 </section>
@@ -252,7 +367,7 @@ const ProjectDetail = () => {
                                 <motion.img
                                     key={selectedImageIndex}
                                     src={images[selectedImageIndex]?.url}
-                                    alt={project.title}
+                                    alt={`${project.title} - Image ${selectedImageIndex + 1}`}
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
@@ -279,12 +394,14 @@ const ProjectDetail = () => {
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length); }}
                                         className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                                        aria-label="Previous image"
                                     >
                                         <ChevronLeft className="w-5 h-5" />
                                     </button>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setSelectedImageIndex((prev) => (prev + 1) % images.length); }}
                                         className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                                        aria-label="Next image"
                                     >
                                         <ChevronRight className="w-5 h-5" />
                                     </button>
@@ -300,12 +417,13 @@ const ProjectDetail = () => {
                                         key={index}
                                         onClick={() => setSelectedImageIndex(index)}
                                         className={`
-                      flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden transition-all duration-300
-                      ${index === selectedImageIndex
+                                            flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden transition-all duration-300
+                                            ${index === selectedImageIndex
                                                 ? "ring-2 ring-accent ring-offset-2 ring-offset-background"
                                                 : "opacity-60 hover:opacity-100"
                                             }
-                    `}
+                                        `}
+                                        aria-label={`View image ${index + 1}`}
                                     >
                                         <img src={img.url} alt="" className="w-full h-full object-cover" />
                                     </button>
@@ -404,9 +522,10 @@ const ProjectDetail = () => {
                                     const relImageUrl = relImages[0].storage_path
                                         ? getImageUrl(relImages[0].storage_path)
                                         : fallbackImages[index % fallbackImages.length];
+                                    const relSlug = createProjectSlug(relProject.title, relProject.id);
 
                                     return (
-                                        <Link key={relProject.id} to={`/project/${relProject.id}`}>
+                                        <Link key={relProject.id} to={`/projects/${relSlug}`}>
                                             <motion.div
                                                 whileHover={{ y: -4 }}
                                                 className="group relative aspect-[4/3] rounded-2xl overflow-hidden cursor-pointer"
@@ -450,6 +569,7 @@ const ProjectDetail = () => {
                         <button
                             className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
                             onClick={() => setLightboxOpen(false)}
+                            aria-label="Close lightbox"
                         >
                             <X className="w-6 h-6 text-white" />
                         </button>
@@ -458,7 +578,7 @@ const ProjectDetail = () => {
                         <motion.img
                             key={selectedImageIndex}
                             src={images[selectedImageIndex]?.url}
-                            alt=""
+                            alt={`${project.title} - Full view`}
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
@@ -472,12 +592,14 @@ const ProjectDetail = () => {
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length); }}
                                     className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                                    aria-label="Previous image"
                                 >
                                     <ChevronLeft className="w-6 h-6 text-white" />
                                 </button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setSelectedImageIndex((prev) => (prev + 1) % images.length); }}
                                     className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                                    aria-label="Next image"
                                 >
                                     <ChevronRight className="w-6 h-6 text-white" />
                                 </button>

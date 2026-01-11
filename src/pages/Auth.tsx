@@ -15,7 +15,7 @@ const authSchema = z.object({
 });
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(true); // Always forced to true for security
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,7 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const validation = authSchema.safeParse({ email, password });
     if (!validation.success) {
       toast.error(validation.error.errors[0].message);
@@ -54,15 +54,8 @@ const Auth = () => {
         if (error) throw error;
         toast.success("Logged in successfully");
       } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/admin`,
-          },
-        });
-        if (error) throw error;
-        toast.success("Account created! You can now log in.");
+        // Signup disabled
+        toast.error("Signups are disabled");
         setIsLogin(true);
       }
     } catch (error: any) {
@@ -115,13 +108,7 @@ const Auth = () => {
             </Button>
           </form>
           <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
-            </button>
+            {/* Signup disabled for security */}
           </div>
         </CardContent>
       </Card>

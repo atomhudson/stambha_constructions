@@ -1,21 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, ArrowRight, ChevronLeft, ChevronRight, CheckCircle2, Clock, Calendar } from "lucide-react";
+import { MapPin, ArrowRight, ChevronLeft, ChevronRight, CheckCircle2, Clock, Calendar, ImageIcon } from "lucide-react";
 import { useState, useEffect } from "react";
-
-// Fallback images for projects without images
-const fallbackImages = [
-  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=80",
-  "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&q=80",
-  "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=600&q=80",
-  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80",
-  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=80",
-  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80",
-  "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=600&q=80",
-  "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80",
-];
+import { createProjectSlug } from "@/pages/ProjectDetail";
 
 const FeaturedProjects = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -27,7 +17,7 @@ const FeaturedProjects = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projects")
-        .select("*")
+        .select("*, project_images(storage_path)")
         .order("created_at", { ascending: false })
         .limit(8);
 
@@ -35,6 +25,14 @@ const FeaturedProjects = () => {
       return data;
     },
   });
+
+  // Helper to get public URL from storage path or return direct URL
+  const getImageUrl = (storagePath: string) => {
+    // Check if it's already a full URL (for external/demo images)
+    if (storagePath.startsWith('http')) return storagePath;
+    const { data } = supabase.storage.from("project-images").getPublicUrl(storagePath);
+    return data.publicUrl;
+  };
 
   useEffect(() => {
     const updateItemsPerView = () => {
@@ -177,7 +175,9 @@ const FeaturedProjects = () => {
               {visibleItems.map((project, index) => {
                 const statusConfig = getStatusConfig(project.status);
                 const StatusIcon = statusConfig.icon;
-                const image = project.image_url || fallbackImages[index % fallbackImages.length];
+                // Get image: first try image_url column, then project_images, then null
+                const firstProjectImage = project.project_images?.[0];
+                const image = project.image_url || (firstProjectImage ? getImageUrl(firstProjectImage.storage_path) : null);
 
                 // Different unevenness pattern: wave-like
                 const heightPatterns = ['h-[460px]', 'h-[380px]', 'h-[420px]'];
@@ -198,54 +198,65 @@ const FeaturedProjects = () => {
                     ${itemsPerView === 3 ? 'w-[calc(33.333%-16px)]' : ''}
                   `}
                   >
-                    <motion.div
-                      whileHover={{ y: -6 }}
-                      transition={{ duration: 0.3 }}
-                      className={`group relative ${heightClass} rounded-3xl overflow-hidden cursor-pointer`}
+                    <Link
+                      to={`/projects/${createProjectSlug(project.title, project.id)}`}
+                      className="block"
                     >
-                      {/* Image */}
                       <motion.div
-                        className="absolute inset-0"
-                        whileHover={{ scale: 1.03 }}
-                        transition={{ duration: 0.5 }}
+                        whileHover={{ y: -6 }}
+                        transition={{ duration: 0.3 }}
+                        className={`group relative ${heightClass} rounded-3xl overflow-hidden cursor-pointer`}
                       >
-                        <img
-                          src={image}
-                          alt={project.title}
-                          className="w-full h-full object-cover"
-                        />
+                        {/* Image or Placeholder */}
+                        <motion.div
+                          className="absolute inset-0"
+                          whileHover={{ scale: 1.03 }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          {image ? (
+                            <img
+                              src={image}
+                              alt={project.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-secondary via-secondary/80 to-accent/20 flex items-center justify-center">
+                              <ImageIcon className="w-16 h-16 text-muted-foreground/30" />
+                            </div>
+                          )}
+                        </motion.div>
+
+                        {/* Subtle overlays */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+
+                        {/* Status - minimal */}
+                        <div className="absolute top-4 left-4">
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-foreground/80">
+                            <StatusIcon className="w-3 h-3" />
+                            <span className="text-xs font-medium">{statusConfig.label}</span>
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="absolute bottom-0 left-0 right-0 p-6">
+                          {project.division && (
+                            <span className="inline-block text-xs text-white/70 mb-2 font-medium">
+                              {project.division}
+                            </span>
+                          )}
+
+                          <h3 className="text-white text-xl font-heading font-semibold mb-2 flex items-center gap-2">
+                            {project.title}
+                            <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+                          </h3>
+
+                          <div className="flex items-center gap-2 text-white/60">
+                            <MapPin className="w-3.5 h-3.5" />
+                            <span className="text-sm line-clamp-1">{project.address}</span>
+                          </div>
+                        </div>
                       </motion.div>
-
-                      {/* Subtle overlays */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-
-                      {/* Status - minimal */}
-                      <div className="absolute top-4 left-4">
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-foreground/80">
-                          <StatusIcon className="w-3 h-3" />
-                          <span className="text-xs font-medium">{statusConfig.label}</span>
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="absolute bottom-0 left-0 right-0 p-6">
-                        {project.division && (
-                          <span className="inline-block text-xs text-white/70 mb-2 font-medium">
-                            {project.division}
-                          </span>
-                        )}
-
-                        <h3 className="text-white text-xl font-heading font-semibold mb-2 flex items-center gap-2">
-                          {project.title}
-                          <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                        </h3>
-
-                        <div className="flex items-center gap-2 text-white/60">
-                          <MapPin className="w-3.5 h-3.5" />
-                          <span className="text-sm line-clamp-1">{project.address}</span>
-                        </div>
-                      </div>
-                    </motion.div>
+                    </Link>
                   </motion.div>
                 );
               })}

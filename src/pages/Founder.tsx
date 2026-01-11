@@ -1,5 +1,7 @@
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/home/Footer";
 import {
@@ -23,100 +25,51 @@ import {
   Mail
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Team members data - replace image URLs with actual photos
-const teamMembers = [
+// Icon mapping for dynamic icons
+const iconMap: Record<string, any> = {
+  Award, Users, Building, Calendar, Heart, Shield, Target, Sparkles,
+  CheckCircle, Hammer, Eye, Handshake, Phone, Building2, MapPin
+};
+
+// Fallback data
+const fallbackTeam = [
   {
-    id: 1,
+    id: "1",
     name: "Rajesh Kumar",
     designation: "Founder & Managing Director",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
-    description: "With over 35 years of experience in construction, Rajesh ji laid the foundation of Stambha Constructions. His vision of honest, quality-driven work has been the guiding principle for our entire journey. Under his leadership, we've completed 500+ projects across Delhi NCR.",
+    image_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
+    description: "With over 35 years of experience in construction, Rajesh ji laid the foundation of Stambha Constructions.",
     quote: "Every brick we lay is a promise of trust and quality.",
     experience: "35+ Years",
-    isFounder: true
-  },
-  {
-    id: 2,
-    name: "Amit Kumar",
-    designation: "Director & Head of Operations",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80",
-    description: "Amit brings modern construction techniques while honoring traditional values. With expertise in project management and interior design, he ensures every project meets the highest standards of excellence.",
-    quote: "Innovation meets tradition in every project we undertake.",
-    experience: "15+ Years",
-    isFounder: false
-  },
-  {
-    id: 3,
-    name: "Suresh Sharma",
-    designation: "Partner & Technical Head",
-    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&q=80",
-    description: "Suresh oversees all technical aspects of our construction projects. His expertise in structural engineering and attention to detail ensures that every build is safe, durable, and built to last generations.",
-    quote: "Precision and safety are non-negotiable in our work.",
-    experience: "20+ Years",
-    isFounder: false
+    is_founder: true,
+    linkedin_url: "",
+    email: "",
   }
 ];
 
-const milestones = [
-  {
-    year: "1970s",
-    title: "The Foundation",
-    description: "Our grandfather laid the first brick of what would become a legacy. Starting with small residential projects in Old Delhi, he built a reputation for honesty and quality.",
-    highlight: "Family Legacy Begins"
-  },
-  {
-    year: "1990s",
-    title: "Expansion Era",
-    description: "The second generation expanded operations across Delhi NCR, modernizing techniques while preserving traditional craftsmanship values.",
-    highlight: "Delhi NCR Growth"
-  },
-  {
-    year: "2012",
-    title: "New Leadership",
-    description: "Current leadership brings fresh perspective with modern design sensibilities and sustainable building practices.",
-    highlight: "Modern Innovation"
-  },
-  {
-    year: "Today",
-    title: "Excellence Achieved",
-    description: "With 500+ completed projects and 100% client satisfaction, we continue to build dreams into reality.",
-    highlight: "500+ Projects"
-  },
+const fallbackMilestones = [
+  { id: "1", year: "1970s", title: "The Foundation", description: "Our grandfather laid the first brick.", highlight: "Family Legacy Begins" },
+  { id: "2", year: "Today", title: "Excellence Achieved", description: "500+ completed projects.", highlight: "500+ Projects" },
 ];
 
-const achievements = [
-  { value: "50+", label: "Years of Legacy", icon: Calendar, description: "Three generations" },
-  { value: "500+", label: "Projects Completed", icon: Building, description: "Residential & commercial" },
-  { value: "1000+", label: "Happy Families", icon: Users, description: "Living in our creations" },
-  { value: "100%", label: "Client Satisfaction", icon: Award, description: "Our proudest achievement" },
+const fallbackAchievements = [
+  { id: "1", value: "50+", label: "Years of Legacy", icon: "Calendar", description: "Three generations" },
+  { id: "2", value: "500+", label: "Projects Completed", icon: "Building", description: "Residential & commercial" },
+  { id: "3", value: "1000+", label: "Happy Families", icon: "Users", description: "Living in our creations" },
+  { id: "4", value: "100%", label: "Client Satisfaction", icon: "Award", description: "Our proudest achievement" },
 ];
 
-const coreValues = [
-  {
-    icon: Shield,
-    title: "Integrity First",
-    description: "Transparent pricing, honest timelines, and no hidden costs."
-  },
-  {
-    icon: Hammer,
-    title: "Master Craftsmanship",
-    description: "Three generations of refined construction techniques."
-  },
-  {
-    icon: Heart,
-    title: "Client Relationships",
-    description: "Many clients have become family friends over the decades."
-  },
-  {
-    icon: Eye,
-    title: "Attention to Detail",
-    description: "We obsess over every corner, finish, and detail."
-  },
+const fallbackValues = [
+  { id: "1", icon: "Shield", title: "Integrity First", description: "Transparent pricing, honest timelines." },
+  { id: "2", icon: "Hammer", title: "Master Craftsmanship", description: "Three generations of refined techniques." },
+  { id: "3", icon: "Heart", title: "Client Relationships", description: "Many clients have become family friends." },
+  { id: "4", icon: "Eye", title: "Attention to Detail", description: "We obsess over every corner and finish." },
 ];
 
-// Founder/Leader Card Component with 3D effect
-const TeamMemberCard = ({ member, index }: { member: typeof teamMembers[0]; index: number }) => {
+// Team Member Card Component
+const TeamMemberCard = ({ member, index }: { member: any; index: number }) => {
   const ref = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -149,32 +102,27 @@ const TeamMemberCard = ({ member, index }: { member: typeof teamMembers[0]; inde
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-      className={`relative group ${member.isFounder ? 'lg:col-span-2' : ''}`}
+      className={`relative group ${member.is_founder ? 'lg:col-span-2' : ''}`}
     >
       <div className={`
         relative rounded-3xl overflow-hidden border border-border/50 
         bg-card/80 backdrop-blur-sm
         hover:border-accent/40 transition-all duration-500
         hover:shadow-2xl hover:shadow-accent/10
-        ${member.isFounder ? 'lg:flex' : ''}
+        ${member.is_founder ? 'lg:flex' : ''}
       `}>
         {/* Image Section */}
         <div
-          className={`
-            relative overflow-hidden
-            ${member.isFounder ? 'lg:w-2/5' : 'aspect-[4/3]'}
-          `}
+          className={`relative overflow-hidden ${member.is_founder ? 'lg:w-2/5' : 'aspect-[4/3]'}`}
           style={{ transform: "translateZ(20px)" }}
         >
           <img
-            src={member.image}
+            src={member.image_url || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80"}
             alt={member.name}
             className="w-full h-full object-cover aspect-[4/3] lg:aspect-auto lg:h-full"
           />
-          {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent lg:bg-gradient-to-r" />
 
-          {/* Experience badge */}
           <div className="absolute top-4 left-4">
             <Badge className="bg-accent text-accent-foreground border-0 shadow-lg">
               <Sparkles className="w-3 h-3 mr-1" />
@@ -182,8 +130,7 @@ const TeamMemberCard = ({ member, index }: { member: typeof teamMembers[0]; inde
             </Badge>
           </div>
 
-          {/* Founder badge */}
-          {member.isFounder && (
+          {member.is_founder && (
             <div className="absolute top-4 right-4">
               <Badge className="bg-primary text-primary-foreground border-0 shadow-lg">
                 <Award className="w-3 h-3 mr-1" />
@@ -195,13 +142,9 @@ const TeamMemberCard = ({ member, index }: { member: typeof teamMembers[0]; inde
 
         {/* Content Section */}
         <div
-          className={`
-            relative p-6 lg:p-8
-            ${member.isFounder ? 'lg:w-3/5 lg:flex lg:flex-col lg:justify-center' : ''}
-          `}
+          className={`relative p-6 lg:p-8 ${member.is_founder ? 'lg:w-3/5 lg:flex lg:flex-col lg:justify-center' : ''}`}
           style={{ transform: "translateZ(30px)" }}
         >
-          {/* Name and Designation */}
           <div className="mb-4">
             <h3 className="text-2xl lg:text-3xl font-heading font-bold text-foreground mb-1">
               {member.name}
@@ -209,39 +152,45 @@ const TeamMemberCard = ({ member, index }: { member: typeof teamMembers[0]; inde
             <p className="text-accent font-medium">{member.designation}</p>
           </div>
 
-          {/* Description */}
           <p className="text-muted-foreground leading-relaxed mb-6">
             {member.description}
           </p>
 
-          {/* Quote */}
-          <div className="relative pl-4 border-l-2 border-accent/30 mb-6">
-            <Quote className="absolute -left-3 -top-1 w-6 h-6 text-accent/30 fill-accent/10" />
-            <p className="text-foreground italic font-medium">
-              "{member.quote}"
-            </p>
-          </div>
+          {member.quote && (
+            <div className="relative pl-4 border-l-2 border-accent/30 mb-6">
+              <Quote className="absolute -left-3 -top-1 w-6 h-6 text-accent/30 fill-accent/10" />
+              <p className="text-foreground italic font-medium">
+                "{member.quote}"
+              </p>
+            </div>
+          )}
 
-          {/* Contact Links */}
           <div className="flex gap-3">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-10 h-10 rounded-xl bg-secondary hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-colors"
-            >
-              <Linkedin className="w-4 h-4" />
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-10 h-10 rounded-xl bg-secondary hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-colors"
-            >
-              <Mail className="w-4 h-4" />
-            </motion.button>
+            {member.linkedin_url && (
+              <motion.a
+                href={member.linkedin_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-10 h-10 rounded-xl bg-secondary hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-colors"
+              >
+                <Linkedin className="w-4 h-4" />
+              </motion.a>
+            )}
+            {member.email && (
+              <motion.a
+                href={`mailto:${member.email}`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-10 h-10 rounded-xl bg-secondary hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+              </motion.a>
+            )}
           </div>
         </div>
 
-        {/* Decorative glow */}
         <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br from-accent/5 via-transparent to-primary/5 pointer-events-none" />
       </div>
     </motion.div>
@@ -249,8 +198,8 @@ const TeamMemberCard = ({ member, index }: { member: typeof teamMembers[0]; inde
 };
 
 // Achievement Card
-const AchievementCard = ({ stat, index }: { stat: typeof achievements[0]; index: number }) => {
-  const Icon = stat.icon;
+const AchievementCard = ({ stat, index }: { stat: any; index: number }) => {
+  const Icon = iconMap[stat.icon] || Award;
 
   return (
     <motion.div
@@ -280,8 +229,8 @@ const AchievementCard = ({ stat, index }: { stat: typeof achievements[0]; index:
 };
 
 // Value Card
-const ValueCard = ({ value, index }: { value: typeof coreValues[0]; index: number }) => {
-  const Icon = value.icon;
+const ValueCard = ({ value, index }: { value: any; index: number }) => {
+  const Icon = iconMap[value.icon] || Shield;
 
   return (
     <motion.div
@@ -308,6 +257,64 @@ const ValueCard = ({ value, index }: { value: typeof coreValues[0]; index: numbe
 };
 
 const Founder = () => {
+  // Fetch team members
+  const { data: dbTeam, isLoading: teamLoading } = useQuery({
+    queryKey: ["team-members"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("team_members")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch milestones
+  const { data: dbMilestones, isLoading: milestonesLoading } = useQuery({
+    queryKey: ["milestones"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("milestones")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch achievements
+  const { data: dbAchievements, isLoading: achievementsLoading } = useQuery({
+    queryKey: ["achievements"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("achievements")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch core values
+  const { data: dbValues, isLoading: valuesLoading } = useQuery({
+    queryKey: ["core-values"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("core_values")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Use database data or fallbacks
+  const teamMembers = dbTeam && dbTeam.length > 0 ? dbTeam : fallbackTeam;
+  const milestones = dbMilestones && dbMilestones.length > 0 ? dbMilestones : fallbackMilestones;
+  const achievements = dbAchievements && dbAchievements.length > 0 ? dbAchievements : fallbackAchievements;
+  const coreValues = dbValues && dbValues.length > 0 ? dbValues : fallbackValues;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -315,7 +322,6 @@ const Founder = () => {
       <main className="pt-24 pb-16">
         {/* Hero Section */}
         <section className="container mx-auto px-6 mb-20 relative">
-          {/* Background decorations */}
           <div className="absolute inset-0 -z-10 overflow-hidden">
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
@@ -326,7 +332,6 @@ const Founder = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center max-w-4xl mx-auto"
           >
-            {/* Badge */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -352,7 +357,7 @@ const Founder = () => {
           </motion.div>
         </section>
 
-        {/* Team Section - Main Focus */}
+        {/* Team Section */}
         <section className="container mx-auto px-6 mb-24">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -372,12 +377,19 @@ const Founder = () => {
             </p>
           </motion.div>
 
-          {/* Team Grid - Founder spans 2 columns on large screens */}
-          <div className="grid lg:grid-cols-2 gap-8">
-            {teamMembers.map((member, index) => (
-              <TeamMemberCard key={member.id} member={member} index={index} />
-            ))}
-          </div>
+          {teamLoading ? (
+            <div className="grid lg:grid-cols-2 gap-8">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-64 rounded-3xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid lg:grid-cols-2 gap-8">
+              {teamMembers.map((member, index) => (
+                <TeamMemberCard key={member.id} member={member} index={index} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Stats Section */}
@@ -385,11 +397,19 @@ const Founder = () => {
           <div className="absolute inset-0 bg-secondary/30" />
 
           <div className="container mx-auto px-6 relative z-10">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              {achievements.map((stat, index) => (
-                <AchievementCard key={stat.label} stat={stat} index={index} />
-              ))}
-            </div>
+            {achievementsLoading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-40 rounded-2xl" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {achievements.map((stat, index) => (
+                  <AchievementCard key={stat.id} stat={stat} index={index} />
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -413,11 +433,19 @@ const Founder = () => {
             </p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-            {coreValues.map((value, index) => (
-              <ValueCard key={value.title} value={value} index={index} />
-            ))}
-          </div>
+          {valuesLoading ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-48 rounded-2xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+              {coreValues.map((value, index) => (
+                <ValueCard key={value.id} value={value} index={index} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Timeline Section */}
@@ -438,40 +466,48 @@ const Founder = () => {
           </motion.div>
 
           <div className="max-w-3xl mx-auto">
-            {milestones.map((milestone, index) => (
-              <motion.div
-                key={milestone.year}
-                initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.15 }}
-                className="flex gap-6 mb-10 last:mb-0"
-              >
-                {/* Timeline dot and line */}
-                <div className="flex flex-col items-center">
-                  <div className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center text-accent-foreground font-bold text-sm shadow-lg shadow-accent/20">
-                    {milestone.year.slice(-2)}
+            {milestonesLoading ? (
+              <div className="space-y-8">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-32 rounded-2xl" />
+                ))}
+              </div>
+            ) : (
+              milestones.map((milestone, index) => (
+                <motion.div
+                  key={milestone.id}
+                  initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.15 }}
+                  className="flex gap-6 mb-10 last:mb-0"
+                >
+                  <div className="flex flex-col items-center">
+                    <div className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center text-accent-foreground font-bold text-sm shadow-lg shadow-accent/20">
+                      {milestone.year.slice(-2)}
+                    </div>
+                    {index < milestones.length - 1 && (
+                      <div className="w-0.5 flex-1 bg-border mt-3" />
+                    )}
                   </div>
-                  {index < milestones.length - 1 && (
-                    <div className="w-0.5 flex-1 bg-border mt-3" />
-                  )}
-                </div>
 
-                {/* Content */}
-                <div className="flex-1 pb-8">
-                  <Badge className="mb-2 bg-primary/10 text-primary border-0">
-                    {milestone.highlight}
-                  </Badge>
-                  <h3 className="text-xl font-heading font-bold text-foreground mb-1">
-                    {milestone.title}
-                  </h3>
-                  <p className="text-sm text-accent font-medium mb-2">{milestone.year}</p>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {milestone.description}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
+                  <div className="flex-1 pb-8">
+                    {milestone.highlight && (
+                      <Badge className="mb-2 bg-primary/10 text-primary border-0">
+                        {milestone.highlight}
+                      </Badge>
+                    )}
+                    <h3 className="text-xl font-heading font-bold text-foreground mb-1">
+                      {milestone.title}
+                    </h3>
+                    <p className="text-sm text-accent font-medium mb-2">{milestone.year}</p>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {milestone.description}
+                    </p>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
         </section>
 
@@ -483,7 +519,6 @@ const Founder = () => {
             viewport={{ once: true }}
             className="relative rounded-3xl overflow-hidden"
           >
-            {/* Background */}
             <div className="absolute inset-0 bg-gradient-to-r from-accent to-accent/80" />
             <div
               className="absolute inset-0 opacity-10"
@@ -537,7 +572,6 @@ const Founder = () => {
 
       <Footer />
 
-      {/* Gradient animation keyframes */}
       <style>{`
         @keyframes gradient {
           0%, 100% { background-position: 0% center; }

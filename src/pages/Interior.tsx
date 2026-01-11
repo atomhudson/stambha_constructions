@@ -5,19 +5,20 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/home/Footer";
 import { Badge } from "@/components/ui/badge";
-import { Bath, Bed, Coffee, ChefHat, Home, Armchair, TreePine, ArrowRight, MapPin, Calendar, Eye, Sparkles } from "lucide-react";
+import { Bath, Bed, Coffee, ChefHat, Home, Armchair, TreePine, ArrowRight, MapPin, Calendar, Eye, Sparkles, Sofa, Lamp, Table2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useRef, useEffect } from "react";
+import { usePageView } from "@/hooks/useAnalytics";
+import { LikeButton } from "@/components/LikeButton";
+import { createProjectSlug } from "./ProjectDetail";
 
-// Fallback images for projects without images
-const fallbackImages = [
-  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=80",
-  "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&q=80",
-  "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=600&q=80",
-  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80",
-];
+// Icon mapping
+const iconMap: Record<string, any> = {
+  Bath, Bed, Coffee, ChefHat, Home, Armchair, TreePine, Sofa, Lamp, Table2
+};
 
-const categoryData: Record<string, { icon: any; gradient: string; accent: string }> = {
+// Default category styling
+const defaultCategoryData: Record<string, { icon: any; gradient: string; accent: string }> = {
   BATHROOM: {
     icon: Bath,
     gradient: "from-sky-400/20 via-blue-500/10 to-indigo-500/20",
@@ -61,7 +62,7 @@ const CategoryPill = ({
   isActive,
   onClick
 }: {
-  category: string;
+  category: any;
   isActive: boolean;
   onClick: () => void;
 }) => {
@@ -91,8 +92,9 @@ const CategoryPill = ({
     y.set(0);
   };
 
-  const data = categoryData[category] || categoryData.FACADE;
-  const Icon = data.icon;
+  const Icon = iconMap[category.icon] || defaultCategoryData[category.name]?.icon || Home;
+  const gradient = category.gradient || defaultCategoryData[category.name]?.gradient || "from-slate-400/20 via-zinc-500/10 to-stone-500/20";
+  const accent = category.accent || defaultCategoryData[category.name]?.accent || "bg-slate-500";
 
   return (
     <motion.button
@@ -107,7 +109,7 @@ const CategoryPill = ({
         relative flex flex-col items-center gap-3 p-6 rounded-2xl cursor-pointer
         transition-all duration-300 border-2 group
         ${isActive
-          ? `bg-gradient-to-br ${data.gradient} border-accent shadow-xl shadow-accent/20`
+          ? `bg-gradient-to-br ${gradient} border-accent shadow-xl shadow-accent/20`
           : "bg-card/50 backdrop-blur-sm border-border/50 hover:border-accent/30 hover:shadow-lg"
         }
       `}
@@ -115,7 +117,7 @@ const CategoryPill = ({
       {/* Glow effect */}
       <div className={`
         absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500
-        bg-gradient-to-br ${data.gradient} blur-xl -z-10
+        bg-gradient-to-br ${gradient} blur-xl -z-10
       `} />
 
       {/* Icon container */}
@@ -131,8 +133,6 @@ const CategoryPill = ({
         style={{ transform: "translateZ(20px)" }}
       >
         <Icon className="w-8 h-8 relative z-10" />
-
-        {/* Shimmer effect */}
         <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       </div>
 
@@ -141,14 +141,14 @@ const CategoryPill = ({
         className={`text-sm font-semibold tracking-wide transition-colors ${isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
         style={{ transform: "translateZ(15px)" }}
       >
-        {category}
+        {category.name}
       </span>
 
       {/* Active indicator */}
       {isActive && (
         <motion.div
           layoutId="activeIndicator"
-          className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full ${data.accent}`}
+          className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full ${accent}`}
         />
       )}
     </motion.button>
@@ -159,11 +159,13 @@ const CategoryPill = ({
 const ProjectCard = ({
   project,
   index,
-  variant
+  variant,
+  categories
 }: {
   project: any;
   index: number;
   variant: "large" | "medium" | "small";
+  categories: any[];
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
@@ -176,15 +178,18 @@ const ProjectCard = ({
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["5deg", "-5deg"]);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-5deg", "5deg"]);
 
-  // Get images from project_images or use fallbacks
+  // Get images from project_images or use image_url fallback
   const getImageUrl = (storagePath: string) => {
+    // Check if it's already a full URL (for external/demo images)
+    if (storagePath.startsWith('http')) return storagePath;
     const { data } = supabase.storage.from("project-images").getPublicUrl(storagePath);
     return data.publicUrl;
   };
 
+  // Get images: project_images first, then image_url column as fallback
   const images = project.project_images?.length
     ? project.project_images.map((img: any) => getImageUrl(img.storage_path))
-    : [fallbackImages[index % fallbackImages.length]];
+    : (project.image_url ? [project.image_url] : []);
 
   // Rotate images every 3 seconds
   useEffect(() => {
@@ -210,10 +215,11 @@ const ProjectCard = ({
   };
 
   const categoryKey = project.category?.toUpperCase() || "FACADE";
-  const catData = categoryData[categoryKey] || categoryData.FACADE;
-  const Icon = catData.icon;
+  const catFromDb = categories.find(c => c.name.toUpperCase() === categoryKey);
+  const catData = catFromDb || defaultCategoryData[categoryKey] || defaultCategoryData.FACADE;
+  const Icon = catFromDb ? (iconMap[catFromDb.icon] || Home) : (catData.icon || Home);
+  const accent = catFromDb?.accent || catData.accent || "bg-slate-500";
 
-  // Random height variations for masonry effect
   const heightClasses = {
     large: "h-[450px] md:h-[500px]",
     medium: "h-[350px] md:h-[400px]",
@@ -221,7 +227,7 @@ const ProjectCard = ({
   };
 
   return (
-    <Link to={`/project/${project.id}`} className="block mb-6 break-inside-avoid">
+    <Link to={`/projects/${createProjectSlug(project.title, project.id)}`} className="block mb-6 break-inside-avoid">
       <motion.div
         ref={ref}
         initial={{ opacity: 0, y: 40 }}
@@ -236,22 +242,27 @@ const ProjectCard = ({
           ${heightClasses[variant]}
         `}
       >
-        {/* Rotating Images Background */}
+        {/* Rotating Images Background or Placeholder */}
         <div className="absolute inset-0">
-          <AnimatePresence mode="wait">
-            <motion.img
-              key={currentImageIndex}
-              src={images[currentImageIndex]}
-              alt={project.title}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          </AnimatePresence>
+          {images.length > 0 ? (
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={currentImageIndex}
+                src={images[currentImageIndex]}
+                alt={project.title}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </AnimatePresence>
+          ) : (
+            <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-secondary via-secondary/80 to-accent/20 flex items-center justify-center">
+              <Icon className="w-16 h-16 text-muted-foreground/30" />
+            </div>
+          )}
 
-          {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10" />
         </div>
 
@@ -285,18 +296,21 @@ const ProjectCard = ({
 
         {/* Top badges */}
         <div className="absolute top-4 left-4 right-4 flex items-start justify-between z-10" style={{ transform: "translateZ(30px)" }}>
-          <Badge className={`${catData.accent} text-white border-0 shadow-lg`}>
+          <Badge className={`${accent} text-white border-0 shadow-lg`}>
             <Icon className="w-3 h-3 mr-1" />
             {project.category || "General"}
           </Badge>
 
-          <Badge
-            variant="outline"
-            className="bg-white/90 backdrop-blur-md border-white/20 text-foreground"
-          >
-            {project.status === "completed" && <Sparkles className="w-3 h-3 mr-1 text-accent" />}
-            {project.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <LikeButton projectId={project.id} />
+            <Badge
+              variant="outline"
+              className="bg-white/90 backdrop-blur-md border-white/20 text-foreground"
+            >
+              {project.status === "completed" && <Sparkles className="w-3 h-3 mr-1 text-accent" />}
+              {project.status}
+            </Badge>
+          </div>
         </div>
 
         {/* Bottom content */}
@@ -348,7 +362,8 @@ const ProjectCard = ({
 const Interior = () => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  const { data: projects, isLoading } = useQuery({
+  // Fetch projects
+  const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ["interior-projects"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -360,7 +375,24 @@ const Interior = () => {
     },
   });
 
-  const categories = ["BATHROOM", "BEDROOM", "DINING", "KITCHEN", "FACADE", "LIVING ROOM", "TERRACE"];
+  // Fetch categories from database
+  const { data: dbCategories, isLoading: categoriesLoading } = useQuery({
+    queryKey: ["interior-categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("interior_categories")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Use database categories
+  const categories = dbCategories || [];
+
+  // Track page view
+  usePageView();
 
   const filteredProjects = activeCategory
     ? projects?.filter(p => p.category?.toUpperCase() === activeCategory)
@@ -440,20 +472,28 @@ const Interior = () => {
               All Projects
             </motion.button>
 
-            {categories.map((category, index) => (
-              <motion.div
-                key={category}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + index * 0.05 }}
-              >
-                <CategoryPill
-                  category={category}
-                  isActive={activeCategory === category}
-                  onClick={() => setActiveCategory(activeCategory === category ? null : category)}
-                />
-              </motion.div>
-            ))}
+            {categoriesLoading ? (
+              <div className="flex gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="w-32 h-24 rounded-2xl" />
+                ))}
+              </div>
+            ) : (
+              categories.map((category, index) => (
+                <motion.div
+                  key={category.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + index * 0.05 }}
+                >
+                  <CategoryPill
+                    category={category}
+                    isActive={activeCategory === category.name}
+                    onClick={() => setActiveCategory(activeCategory === category.name ? null : category.name)}
+                  />
+                </motion.div>
+              ))
+            )}
           </motion.div>
         </section>
 
@@ -475,7 +515,7 @@ const Interior = () => {
             </div>
           </motion.div>
 
-          {isLoading ? (
+          {projectsLoading ? (
             <div className="grid md:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
                 <Skeleton key={i} className={`rounded-3xl ${i === 0 ? "md:col-span-2 md:row-span-2 aspect-square md:aspect-[4/3]" : "aspect-video"}`} />
@@ -489,6 +529,7 @@ const Interior = () => {
                   project={project}
                   index={index}
                   variant={getVariant(index)}
+                  categories={categories}
                 />
               ))}
             </div>

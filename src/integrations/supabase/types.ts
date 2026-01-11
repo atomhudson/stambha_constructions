@@ -166,6 +166,165 @@ export type Database = {
         }
         Relationships: []
       }
+      services: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          image_url: string | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          image_url?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          image_url?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          id: string
+          name: string
+          designation: string
+          image_url: string | null
+          description: string | null
+          quote: string | null
+          experience: string | null
+          is_founder: boolean
+          linkedin_url: string | null
+          email: string | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          designation: string
+          image_url?: string | null
+          description?: string | null
+          quote?: string | null
+          experience?: string | null
+          is_founder?: boolean
+          linkedin_url?: string | null
+          email?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          designation?: string
+          image_url?: string | null
+          description?: string | null
+          quote?: string | null
+          experience?: string | null
+          is_founder?: boolean
+          linkedin_url?: string | null
+          email?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      milestones: {
+        Row: {
+          id: string
+          year: string
+          title: string
+          description: string | null
+          highlight: string | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          year: string
+          title: string
+          description?: string | null
+          highlight?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          year?: string
+          title?: string
+          description?: string | null
+          highlight?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      core_values: {
+        Row: {
+          id: string
+          icon: string
+          title: string
+          description: string | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          icon: string
+          title: string
+          description?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          icon?: string
+          title?: string
+          description?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      brand_partners: {
+        Row: {
+          id: string
+          name: string
+          tagline: string | null
+          color_gradient: string | null
+          logo_url: string | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          tagline?: string | null
+          color_gradient?: string | null
+          logo_url?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          tagline?: string | null
+          color_gradient?: string | null
+          logo_url?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       unique_features: {
         Row: {
           created_at: string
@@ -189,6 +348,151 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      achievements: {
+        Row: {
+          id: string
+          value: string
+          label: string
+          icon: string
+          description: string | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          value: string
+          label: string
+          icon: string
+          description?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          value?: string
+          label?: string
+          icon?: string
+          description?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      interior_categories: {
+        Row: {
+          id: string
+          name: string
+          icon: string
+          gradient: string | null
+          accent: string | null
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          icon: string
+          gradient?: string | null
+          accent?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          icon?: string
+          gradient?: string | null
+          accent?: string | null
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      page_views: {
+        Row: {
+          id: string
+          page_path: string
+          visitor_id: string | null
+          user_agent: string | null
+          referrer: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          page_path: string
+          visitor_id?: string | null
+          user_agent?: string | null
+          referrer?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          page_path?: string
+          visitor_id?: string | null
+          user_agent?: string | null
+          referrer?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      project_views: {
+        Row: {
+          id: string
+          project_id: string | null
+          visitor_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id?: string | null
+          visitor_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string | null
+          visitor_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_views_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      project_likes: {
+        Row: {
+          id: string
+          project_id: string | null
+          visitor_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id?: string | null
+          visitor_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string | null
+          visitor_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_likes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       user_roles: {
         Row: {

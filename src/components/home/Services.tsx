@@ -1,54 +1,30 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-
-const services = [
-  {
-    title: "Bathroom",
-    description: "Luxury spa-like bathrooms with modern fixtures",
-    image: "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=600&q=80",
-  },
-  {
-    title: "Bedroom",
-    description: "Comfortable sanctuaries for rest",
-    image: "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=600&q=80",
-  },
-  {
-    title: "Kitchen",
-    description: "Functional and beautiful cooking spaces",
-    image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
-  },
-  {
-    title: "Living Room",
-    description: "Inviting spaces for family gatherings",
-    image: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=600&q=80",
-  },
-  {
-    title: "Dining",
-    description: "Elegant dining experiences",
-    image: "https://images.unsplash.com/photo-1617806118233-18e1de247200?w=600&q=80",
-  },
-  {
-    title: "Facade",
-    description: "Stunning exterior impressions",
-    image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=600&q=80",
-  },
-  {
-    title: "Terrace",
-    description: "Outdoor retreats with views",
-    image: "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=600&q=80",
-  },
-  {
-    title: "Study Room",
-    description: "Focused workspaces at home",
-    image: "https://images.unsplash.com/photo-1618221118493-9cfa1a1c00da?w=600&q=80",
-  },
-];
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Services = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerView, setItemsPerView] = useState(4);
   const [isAnimating, setIsAnimating] = useState(false);
+
+  // Fetch services from database
+  const { data: dbServices, isLoading } = useQuery({
+    queryKey: ["services"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("services")
+        .select("*")
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Use database services
+  const services = dbServices || [];
 
   useEffect(() => {
     const updateItemsPerView = () => {
@@ -70,14 +46,14 @@ const Services = () => {
 
   // Infinite carousel logic
   const handleNext = () => {
-    if (isAnimating) return;
+    if (isAnimating || services.length === 0) return;
     setIsAnimating(true);
     setCurrentIndex((prev) => (prev + 1) % services.length);
     setTimeout(() => setIsAnimating(false), 500);
   };
 
   const handlePrev = () => {
-    if (isAnimating) return;
+    if (isAnimating || services.length === 0) return;
     setIsAnimating(true);
     setCurrentIndex((prev) => (prev - 1 + services.length) % services.length);
     setTimeout(() => setIsAnimating(false), 500);
@@ -85,8 +61,9 @@ const Services = () => {
 
   // Create infinite loop array
   const getVisibleItems = () => {
+    if (services.length === 0) return [];
     const items = [];
-    for (let i = 0; i < itemsPerView + 2; i++) {
+    for (let i = 0; i < Math.min(itemsPerView + 2, services.length); i++) {
       const index = (currentIndex + i) % services.length;
       items.push({ ...services[index], originalIndex: index });
     }
@@ -94,6 +71,24 @@ const Services = () => {
   };
 
   const visibleItems = getVisibleItems();
+
+  if (isLoading) {
+    return (
+      <section className="py-10 md:py-20 bg-background">
+        <div className="container mx-auto px-6">
+          <div className="mb-12">
+            <Skeleton className="h-6 w-32 mb-4" />
+            <Skeleton className="h-12 w-64" />
+          </div>
+          <div className="flex gap-5">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="flex-1 h-[400px] rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-10 md:py-20 relative overflow-hidden bg-background">
@@ -175,11 +170,11 @@ const Services = () => {
                     exit={{ opacity: 0, x: -50 }}
                     transition={{ duration: 0.4, delay: index * 0.05 }}
                     className={`flex-shrink-0 ${marginTop}
-                    ${itemsPerView === 1 ? 'w-full' : ''}
-                    ${itemsPerView === 2 ? 'w-[calc(50%-10px)]' : ''}
-                    ${itemsPerView === 3 ? 'w-[calc(33.333%-14px)]' : ''}
-                    ${itemsPerView === 4 ? 'w-[calc(25%-15px)]' : ''}
-                  `}
+                      ${itemsPerView === 1 ? 'w-full' : ''}
+                      ${itemsPerView === 2 ? 'w-[calc(50%-10px)]' : ''}
+                      ${itemsPerView === 3 ? 'w-[calc(33.333%-14px)]' : ''}
+                      ${itemsPerView === 4 ? 'w-[calc(25%-15px)]' : ''}
+                    `}
                   >
                     <motion.div
                       whileHover={{ y: -8 }}
@@ -193,7 +188,7 @@ const Services = () => {
                         transition={{ duration: 0.5 }}
                       >
                         <img
-                          src={service.image}
+                          src={service.image_url || "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=600&q=80"}
                           alt={service.title}
                           className="w-full h-full object-cover"
                         />
